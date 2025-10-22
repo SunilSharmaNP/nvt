@@ -100,6 +100,95 @@ MONGO_URI=mongodb://localhost:27017
 DATABASE_NAME=video_tools_bot
 ```
 
+🐳 Docker Setup Guide - Video Tools Bot
+VPS pe Docker se Bot Chalane ka Tarika
+Prerequisites
+VPS pe ye installed hona chahiye:
+
+Docker
+Docker Compose
+1️⃣ Docker Install Karo (Agar nahi hai to)
+# Docker install karo
+curl -fsSL https://get.docker.com -o get-docker.sh
+sudo sh get-docker.sh
+# Docker Compose install karo
+sudo apt-get update
+sudo apt-get install docker-compose-plugin
+# User ko Docker group me add karo (optional, sudo nahi lagana padega)
+sudo usermod -aG docker $USER
+Note: User add karne ke baad logout/login karo ya terminal restart karo.
+
+Setup Methods
+Method 1: Docker Compose se (Recommended - MongoDB Built-in)
+Ye method sabse easy hai, MongoDB automatically setup ho jayega!
+
+Step 1: Environment Variables Set Karo
+.env file banao repository me (template se copy karo):
+
+cp .env.docker .env
+nano .env
+Ye details daalo:
+
+# Telegram Bot Configuration
+BOT_TOKEN=your_bot_token_here
+API_ID=your_api_id_here
+API_HASH=your_api_hash_here
+OWNER_ID=your_telegram_user_id
+SUDO_USERS=comma_separated_admin_ids
+AUTHORIZED_GROUPS=comma_separated_group_ids
+# MongoDB Configuration (Change the password!)
+MONGO_ROOT_USER=mongoroot
+MONGO_ROOT_PASSWORD=your_strong_password_here
+MONGO_URI=mongodb://mongoroot:your_strong_password_here@mongodb:27017/
+DATABASE_NAME=video_tools_bot
+# Optional
+GOFILE_API_KEY=optional_gofile_key
+LOG_CHANNEL=optional_log_channel_id
+⚠️ SECURITY: Change MONGO_ROOT_PASSWORD to a strong password for production!
+
+Step 2: Bot Chalao
+# Build aur start karo (first time)
+docker-compose up -d --build
+# Logs dekho
+docker-compose logs -f bot
+# Stop karo
+docker-compose down
+# Restart karo
+docker-compose restart bot
+Method 2: Simple Dockerfile (External MongoDB)
+Agar aapke paas already MongoDB hai to:
+
+Step 1: Docker Image Build Karo
+docker build -t video-tools-bot .
+Step 2: Bot Run Karo
+docker run -d \
+  --name video_bot \
+  --restart unless-stopped \
+  -e BOT_TOKEN="your_bot_token" \
+  -e API_ID="your_api_id" \
+  -e API_HASH="your_api_hash" \
+  -e OWNER_ID="your_user_id" \
+  -e SUDO_USERS="admin_ids" \
+  -e AUTHORIZED_GROUPS="group_ids" \
+  -e MONGO_URI="mongodb://your_mongo_uri" \
+  -e DATABASE_NAME="video_tools_bot" \
+  -v $(pwd)/downloads:/app/downloads \
+  video-tools-bot
+Useful Docker Commands
+Bot Management
+# Bot logs dekho
+docker logs -f video_tools_bot
+# Bot stop karo
+docker stop video_tools_bot
+# Bot start karo
+docker start video_tools_bot
+# Bot restart karo
+docker restart video_tools_bot
+# Bot remove karo
+docker rm -f video_tools_bot
+# Container me enter karo (debugging)
+docker exec -it video_tools_bot bash
+
 ## 📝 Usage
 
 ### For Users
