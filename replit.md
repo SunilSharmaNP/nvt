@@ -4,14 +4,20 @@
 Professional Telegram bot for advanced video processing with multiple tools including encoding, merging, conversion, watermarking, trimming, sample generation, and mediainfo extraction.
 
 ## Recent Changes (October 22, 2025)
-- Complete bot implementation with all requested features
-- Database models for user settings and task management
-- FFmpeg integration for video processing
-- Authorization system with hold/active mode for groups
-- Private chat restrictions with admin override
-- Full user settings system (6 configurable options)
-- 7 video processing tools implemented
-- Setup scripts and comprehensive documentation created
+
+### Build 1.0.0 - Production Release
+- ✅ Complete bot implementation with all requested features
+- ✅ Database models for user settings and task management
+- ✅ FFmpeg integration for video processing
+- ✅ Authorization system with hold/active mode for groups
+- ✅ Private chat restrictions with admin override
+- ✅ Full user settings system (6 configurable options)
+- ✅ 7 video processing tools implemented
+- ✅ Setup scripts and comprehensive documentation created
+- 🐛 **Critical fix**: Fixed user state persistence bug in `add_user` function
+  - Previously reset user data on every call
+  - Now correctly preserves settings, active flags, and task state
+  - Confirmed production-ready by architecture review
 
 ## Project Architecture
 
