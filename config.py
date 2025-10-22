@@ -6,15 +6,42 @@ load_dotenv()
 class Config:
     # Telegram Bot Configuration
     BOT_TOKEN = os.environ.get("BOT_TOKEN", "")
-    API_ID = int(os.environ.get("API_ID", "0"))
+    
+    # Safe int conversion with default
+    try:
+        API_ID = int(os.environ.get("API_ID", "0"))
+    except ValueError:
+        API_ID = 0
+    
     API_HASH = os.environ.get("API_HASH", "")
     
     # Bot Owner/Admin Configuration
-    OWNER_ID = int(os.environ.get("OWNER_ID", "0"))
-    SUDO_USERS = [int(x) for x in os.environ.get("SUDO_USERS", "").split(",") if x.strip()]
+    try:
+        OWNER_ID = int(os.environ.get("OWNER_ID", "0"))
+    except ValueError:
+        OWNER_ID = 0
     
-    # Authorized Groups
-    AUTHORIZED_GROUPS = [int(x) for x in os.environ.get("AUTHORIZED_GROUPS", "").split(",") if x.strip()]
+    # Parse sudo users safely
+    SUDO_USERS = []
+    sudo_users_str = os.environ.get("SUDO_USERS", "")
+    if sudo_users_str:
+        for x in sudo_users_str.split(","):
+            try:
+                if x.strip():
+                    SUDO_USERS.append(int(x.strip()))
+            except ValueError:
+                pass
+    
+    # Parse authorized groups safely
+    AUTHORIZED_GROUPS = []
+    auth_groups_str = os.environ.get("AUTHORIZED_GROUPS", "")
+    if auth_groups_str:
+        for x in auth_groups_str.split(","):
+            try:
+                if x.strip():
+                    AUTHORIZED_GROUPS.append(int(x.strip()))
+            except ValueError:
+                pass
     
     # MongoDB Configuration
     MONGO_URI = os.environ.get("MONGO_URI", "mongodb://localhost:27017")

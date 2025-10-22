@@ -13,24 +13,36 @@ class Database:
     
     async def add_user(self, user_id: int, username: str = None):
         """Add a new user or update existing user"""
-        user_data = {
-            "user_id": user_id,
-            "username": username,
-            "settings": Config.DEFAULT_SETTINGS.copy(),
-            "is_active": False,
-            "is_banned": False,
-            "video_tool_selected": None,
-            "encoding_settings": None,
-            "merge_type": None,
-            "temp_files": [],
-            "created_at": datetime.utcnow(),
-            "last_used": datetime.utcnow()
-        }
-        await self.users.update_one(
-            {"user_id": user_id},
-            {"$set": user_data, "$setOnInsert": {"created_at": datetime.utcnow()}},
-            upsert=True
-        )
+        # Check if user exists
+        existing_user = await self.users.find_one({"user_id": user_id})
+        
+        if existing_user:
+            # User exists - only update username and last_used
+            await self.users.update_one(
+                {"user_id": user_id},
+                {
+                    "$set": {
+                        "username": username,
+                        "last_used": datetime.utcnow()
+                    }
+                }
+            )
+        else:
+            # New user - create with defaults
+            user_data = {
+                "user_id": user_id,
+                "username": username,
+                "settings": Config.DEFAULT_SETTINGS.copy(),
+                "is_active": False,
+                "is_banned": False,
+                "video_tool_selected": None,
+                "encoding_settings": None,
+                "merge_type": None,
+                "temp_files": [],
+                "created_at": datetime.utcnow(),
+                "last_used": datetime.utcnow()
+            }
+            await self.users.insert_one(user_data)
     
     async def get_user(self, user_id: int) -> Optional[Dict]:
         """Get user data"""
