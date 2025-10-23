@@ -4,9 +4,6 @@ __pycache__/
 *$py.class
 *.so
 .Python
-env/
-venv/
-ENV/
 build/
 develop-eggs/
 dist/
@@ -23,30 +20,27 @@ wheels/
 .installed.cfg
 *.egg
 
-# Environment
+# Virtual Environment
+venv/
+ENV/
+env/
+
+# Environment variables
 .env
-*.env
-!.env.example
-
-# Downloads
-downloads/
-*.mp4
-*.mkv
-*.avi
-*.mov
-*.flv
-*.wmv
-*.webm
-
-# Thumbnails
-*.jpg
-*.jpeg
-*.png
-*.gif
 
 # Session files
 *.session
 *.session-journal
+
+# Downloaded files
+downloads/*
+!downloads/.gitkeep
+
+# Thumbnails
+thumbnails/
+
+# Logs
+*.log
 
 # IDE
 .vscode/
@@ -54,10 +48,3 @@ downloads/
 *.swp
 *.swo
 *~
-
-# OS
-.DS_Store
-Thumbs.db
-
-# Logs
-*.log
