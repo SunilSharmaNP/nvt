@@ -31,3 +31,29 @@ def is_subtitle_file(filename: str) -> bool:
     """Check if file is subtitle"""
     subtitle_extensions = ['srt', 'ass', 'ssa', 'vtt', 'sub']
     return get_file_extension(filename).lower() in subtitle_extensions
+
+def format_size(bytes: int) -> str:
+    """Format bytes to human readable size"""
+    for unit in ['B', 'KB', 'MB', 'GB']:
+        if bytes < 1024.0:
+            return f"{bytes:.2f} {unit}"
+        bytes /= 1024.0
+    return f"{bytes:.2f} TB"
+
+def format_time(seconds: float) -> str:
+    """Format seconds to human readable time"""
+    if seconds < 60:
+        return f"{int(seconds)}s"
+    elif seconds < 3600:
+        return f"{int(seconds // 60)}m {int(seconds % 60)}s"
+    else:
+        hours = int(seconds // 3600)
+        minutes = int((seconds % 3600) // 60)
+        return f"{hours}h {minutes}m"
+
+def get_progress_bar(percentage: float, length: int = 10) -> str:
+    """Generate progress bar"""
+    filled = int(length * percentage / 100)
+    bar = "█" * filled + "░" * (length - filled)
+    return f"[{bar}] {percentage:.1f}%"
+    
