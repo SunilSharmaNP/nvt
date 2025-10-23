@@ -6,11 +6,11 @@ from bot.utils.helpers import is_admin, is_authorized_group
 from config import Config
 
 WELCOME_TEXT = """
-👋 **Welcome to Video Tools Bot!**
+👋 **Video Tools Bot में आपका स्वागत है!**
 
-🎬 **Professional Video Processing at Your Fingertips**
+🎬 **Professional Video Processing**
 
-This bot provides powerful video editing tools including:
+यह bot आपको शक्तिशाली video editing tools प्रदान करता है:
 • Video Encoding (Multiple Quality Presets)
 • Video Merging (Video+Video, Video+Audio, Video+Subs)
 • Format Conversion (Document↔Video)
@@ -19,18 +19,17 @@ This bot provides powerful video editing tools including:
 • Sample Generation
 • MediaInfo Extraction
 
-⚙️ **Getting Started:**
-1. First, configure your **User Settings** for customized output
-2. Select a tool from **Video Tools** menu
-3. Send your video file(s) to start processing
+⚙️ **शुरू करने के लिए:**
+1. पहले **User Settings** configure करें
+2. **Video Tools** menu से tool चुनें
+3. अपनी video file भेजें
 
-📋 **Important Notes:**
-• Set your preferences before starting tasks
-• One task per user at a time
-• Bot works in authorized groups only
-• Private chat limited (use in authorized groups)
+📋 **जरूरी नोट:**
+• एक समय में एक task
+• Authorized groups में ही काम करता है
+• Task शुरू करने से पहले settings set करें
 
-Choose an option below to continue:
+नीचे से option चुनें:
 """
 
 @Client.on_message(filters.command("start") & filters.private)
@@ -38,16 +37,13 @@ async def start_private(client: Client, message: Message):
     """Handle /start command in private chat"""
     user_id = message.from_user.id
     username = message.from_user.username
-    
-    # Add user to database
+
     await db.add_user(user_id, username)
-    
-    # Check if user is banned
+
     if await db.is_user_banned(user_id):
-        await message.reply_text("❌ You are banned from using this bot.")
+        await message.reply_text("❌ आप इस bot को उपयोग करने से banned हैं।")
         return
-    
-    # Send welcome message with main menu
+
     await message.reply_text(
         WELCOME_TEXT,
         reply_markup=main_menu_buttons()
@@ -59,61 +55,51 @@ async def start_group(client: Client, message: Message):
     user_id = message.from_user.id
     username = message.from_user.username
     chat_id = message.chat.id
-    
-    # Add user to database
+
     await db.add_user(user_id, username)
-    
-    # Check if user is banned
+
     if await db.is_user_banned(user_id):
-        await message.reply_text("❌ You are banned from using this bot.")
+        await message.reply_text("❌ आप इस bot को उपयोग करने से banned हैं।")
         return
-    
-    # Check if group is authorized
+
     if not await is_authorized_group(chat_id):
         await message.reply_text(
             "⚠️ **Unauthorized Group**\n\n"
-            "This bot works only in authorized groups.\n"
-            f"Please contact the owner to authorize this group.\n\n"
+            "यह bot केवल authorized groups में काम करता है।\n"
+            f"कृपया owner से संपर्क करें।\n\n"
             f"Owner: {Config.OWNER_ID}"
         )
         return
-    
-    # Toggle user active status in this group
+
     is_active = await db.is_user_active(user_id, chat_id)
     await db.set_user_active(user_id, chat_id, not is_active)
-    
+
     if not is_active:
-        # User is now active
         await message.reply_text(
             f"✅ **Bot Activated for {message.from_user.mention}**\n\n"
-            "🎬 You can now use all video tools!\n\n"
+            "🎬 अब आप सभी video tools का उपयोग कर सकते हैं!\n\n"
             "⚙️ **Quick Setup:**\n"
-            "1. Configure your User Settings first\n"
-            "2. Choose a video tool from Video Tools menu\n"
-            "3. Send your files to start processing\n\n"
-            "Use the buttons below to get started:",
+            "1. पहले User Settings configure करें\n"
+            "2. Video Tools menu से tool चुनें\n"
+            "3. अपनी files भेजें\n\n"
+            "नीचे के buttons से शुरू करें:",
             reply_markup=main_menu_buttons()
         )
     else:
-        # User is now in hold mode
         await message.reply_text(
             f"⏸ **Bot Deactivated for {message.from_user.mention}**\n\n"
-            "The bot is now in hold mode for you.\n"
-            "Use /start again to activate when you need it."
+            "Bot अब hold mode में है।\n"
+            "दोबारा activate करने के लिए /start उपयोग करें।"
         )
 
 @Client.on_message(filters.command("stop"))
 async def stop_command(client: Client, message: Message):
     """Handle /stop command"""
     user_id = message.from_user.id
-    
-    # Cancel any active tasks
+
     await db.cancel_task(user_id)
-    
-    # Clear temporary files
     await db.clear_temp_files(user_id)
-    
-    # If in group, set to hold mode
+
     if message.chat.type != "private":
         await db.set_user_active(user_id, message.chat.id, False)
         await message.reply_text(
@@ -126,36 +112,36 @@ async def stop_command(client: Client, message: Message):
     else:
         await message.reply_text(
             "🛑 **Tasks Cancelled**\n\n"
-            "All your active tasks have been cancelled and temporary files cleared."
+            "सभी active tasks cancel कर दिए गए हैं।"
         )
 
 @Client.on_message(filters.command("s") & filters.group)
 async def show_tasks(client: Client, message: Message):
     """Show all running tasks in the group"""
     chat_id = message.chat.id
-    
-    # Check if group is authorized
+
     if not await is_authorized_group(chat_id):
         return
-    
-    # Get all active tasks
+
     tasks = await db.get_all_active_tasks()
-    
+
     if not tasks:
-        await message.reply_text("📊 **No Active Tasks**\n\nNo video processing tasks are currently running.")
+        await message.reply_text("📊 **No Active Tasks**\n\nकोई भी video processing task नहीं चल रहा है।")
         return
-    
-    # Build task list message
+
     text = "📊 **Active Tasks**\n\n"
     for i, task in enumerate(tasks, 1):
-        user = await client.get_users(task["user_id"])
-        task_type = task.get("task_type", "Unknown")
-        progress = task.get("progress", 0)
-        
-        text += f"{i}. **{user.mention}**\n"
-        text += f"   • Task: {task_type}\n"
-        text += f"   • Progress: {progress}%\n\n"
-    
+        try:
+            user = await client.get_users(task["user_id"])
+            task_type = task.get("task_type", "Unknown")
+            progress = task.get("progress", 0)
+
+            text += f"{i}. **{user.mention}**\n"
+            text += f"   • Task: {task_type}\n"
+            text += f"   • Progress: {progress}%\n\n"
+        except:
+            continue
+
     await message.reply_text(text)
 
 @Client.on_message(filters.command("help"))
@@ -165,64 +151,57 @@ async def help_command(client: Client, message: Message):
 📚 **Video Tools Bot - Help Guide**
 
 **Available Commands:**
-• `/start` - Activate/Deactivate bot (in groups) or show main menu (in private)
-• `/stop` - Stop bot and cancel all tasks
-• `/s` - Show all running tasks (groups only)
-• `/help` - Show this help message
+• `/start` - Bot activate/deactivate करें
+• `/stop` - Bot stop करें और tasks cancel करें
+• `/s` - सभी running tasks देखें (groups only)
+• `/help` - यह help message
 
-**How to Use:**
+**कैसे उपयोग करें:**
 
 **1️⃣ User Settings**
-Configure your preferences before processing:
-• **Send as**: Document or Video
-• **Thumbnail**: Set custom thumbnail for uploads
-• **Filename**: Customize output filename
-• **Metadata**: Enable/Disable metadata
-• **Download Mode**: Telegram or Direct URL
-• **Upload Mode**: Telegram or GoFile server
+Processing से पहले अपनी preferences configure करें:
+• **Send as**: Document या Video
+• **Thumbnail**: Custom thumbnail set करें
+• **Filename**: Output filename customize करें
+• **Metadata**: Enable/Disable करें
+• **Download Mode**: Telegram या Direct URL
+• **Upload Mode**: Telegram या GoFile server
 
 **2️⃣ Video Tools**
-Choose from 7 powerful tools:
+7 शक्तिशाली tools में से चुनें:
 
 🔗 **Video Merge**
-   • Video + Video: Merge multiple videos
-   • Video + Audio: Replace/add audio track
-   • Video + Subtitles: Add subtitle file
+   • Video + Video: Multiple videos merge करें
+   • Video + Audio: Audio track replace/add करें
+   • Video + Subtitles: Subtitle file add करें
 
 🎞️ **Video Encoding**
    • Multiple quality presets (1080p, 720p, 480p, 360p)
-   • HEVC encoding for smaller file sizes
-   • Custom encoding settings (CRF, bitrate, codec, etc.)
+   • HEVC encoding for smaller files
+   • Custom encoding settings
 
 🔄 **Convert**
    • Document to Video
    • Video to Document
 
 ©️ **Watermark**
-   • Add image watermark to videos
+   • Videos पर image watermark add करें
 
 ✂️ **Trim Video**
-   • Cut specific portions from video
+   • Video से specific portions cut करें
 
 🎬 **Sample Video**
-   • Generate sample clips
+   • Sample clips generate करें
 
 📊 **MediaInfo**
-   • Get detailed video information
-
-**3️⃣ Processing Flow**
-1. Configure User Settings
-2. Select Video Tool
-3. Send required file(s)
-4. Wait for processing
-5. Receive processed file
+   • Detailed video information पाएं
 
 **Important Notes:**
-• Only one task per user at a time
-• Bot works in authorized groups only
-• Private chat has limited functionality (unless you're an admin)
-• Always set User Settings before starting tasks
+• एक समय में एक task per user
+• Authorized groups में ही काम करता है
+• Tasks शुरू करने से पहले User Settings set करें
 
-Need more help? Contact bot owner: {Config.OWNER_ID}
+और मदद चाहिए? Owner से संपर्क करें: {Config.OWNER_ID}
 """
     await message.reply_text(help_text)
+    
