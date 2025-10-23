@@ -36,8 +36,15 @@ class Database:
                 "encoding_settings": None,
                 "merge_type": None,
                 "temp_files": [],
+                "watermark_type": None,
+                "watermark_text": None,
+                "watermark_image_file_id": None,
                 "watermark_position": "topright",
                 "trim_settings": None,
+                "sample_duration": 30,
+                "convert_mode": "to_document",
+                "thumbnail_file_id": None,
+                "custom_filename": None,
                 "created_at": datetime.utcnow(),
                 "last_used": datetime.utcnow()
             }
@@ -54,24 +61,29 @@ class Database:
             {"$set": {"settings": settings, "last_used": datetime.utcnow()}}
         )
 
-    async def set_user_active(self, user_id: int, group_id: int, is_active: bool):
-        """Set user active/hold mode in a specific group"""
+    async def set_user_active(self, user_id: int, is_active: bool, group_id: int = None):
+        """Set user active/hold mode"""
+        update_data = {
+            "is_active": is_active,
+            "last_used": datetime.utcnow()
+        }
+        if group_id:
+            update_data[f"active_in_group_{group_id}"] = is_active
+        
         await self.users.update_one(
             {"user_id": user_id},
-            {
-                "$set": {
-                    f"active_in_group_{group_id}": is_active,
-                    "last_used": datetime.utcnow()
-                }
-            }
+            {"$set": update_data}
         )
 
-    async def is_user_active(self, user_id: int, group_id: int) -> bool:
-        """Check if user is in active mode in a specific group"""
+    async def is_user_active(self, user_id: int, group_id: int = None) -> bool:
+        """Check if user is in active mode"""
         user = await self.get_user(user_id)
-        if user:
+        if not user:
+            return False
+        
+        if group_id:
             return user.get(f"active_in_group_{group_id}", False)
-        return False
+        return user.get("is_active", False)
 
     async def set_video_tool(self, user_id: int, tool: str):
         """Set selected video tool for user"""
@@ -94,18 +106,67 @@ class Database:
             {"$set": {"merge_type": merge_type, "last_used": datetime.utcnow()}}
         )
 
+    async def set_watermark_type(self, user_id: int, wm_type: str):
+        """Set watermark type (text/image)"""
+        await self.users.update_one(
+            {"user_id": user_id},
+            {"$set": {"watermark_type": wm_type, "last_used": datetime.utcnow()}}
+        )
+
+    async def set_watermark_text(self, user_id: int, text: str):
+        """Set watermark text"""
+        await self.users.update_one(
+            {"user_id": user_id},
+            {"$set": {"watermark_text": text, "last_used": datetime.utcnow()}}
+        )
+
+    async def set_watermark_image(self, user_id: int, file_id: str):
+        """Set watermark image file ID"""
+        await self.users.update_one(
+            {"user_id": user_id},
+            {"$set": {"watermark_image_file_id": file_id, "last_used": datetime.utcnow()}}
+        )
+
     async def set_watermark_position(self, user_id: int, position: str):
-        """Set watermark position for user"""
+        """Set watermark position"""
         await self.users.update_one(
             {"user_id": user_id},
             {"$set": {"watermark_position": position, "last_used": datetime.utcnow()}}
         )
 
     async def set_trim_settings(self, user_id: int, settings: Dict):
-        """Set trim settings for user"""
+        """Set trim settings"""
         await self.users.update_one(
             {"user_id": user_id},
             {"$set": {"trim_settings": settings, "last_used": datetime.utcnow()}}
+        )
+
+    async def set_sample_duration(self, user_id: int, duration: int):
+        """Set sample video duration"""
+        await self.users.update_one(
+            {"user_id": user_id},
+            {"$set": {"sample_duration": duration, "last_used": datetime.utcnow()}}
+        )
+
+    async def set_convert_mode(self, user_id: int, mode: str):
+        """Set convert mode (to_document/to_video)"""
+        await self.users.update_one(
+            {"user_id": user_id},
+            {"$set": {"convert_mode": mode, "last_used": datetime.utcnow()}}
+        )
+
+    async def set_thumbnail(self, user_id: int, file_id: str):
+        """Set thumbnail file ID"""
+        await self.users.update_one(
+            {"user_id": user_id},
+            {"$set": {"thumbnail_file_id": file_id, "last_used": datetime.utcnow()}}
+        )
+
+    async def set_custom_filename(self, user_id: int, filename: str):
+        """Set custom filename"""
+        await self.users.update_one(
+            {"user_id": user_id},
+            {"$set": {"custom_filename": filename, "last_used": datetime.utcnow()}}
         )
 
     async def add_temp_file(self, user_id: int, file_info: Dict):
@@ -124,7 +185,23 @@ class Database:
         """Clear user's temporary files"""
         await self.users.update_one(
             {"user_id": user_id},
-            {"$set": {"temp_files": [], "video_tool_selected": None, "merge_type": None, "trim_settings": None}}
+            {"$set": {"temp_files": []}}
+        )
+
+    async def clear_all_user_data(self, user_id: int):
+        """Clear all user tool selections and temp data"""
+        await self.users.update_one(
+            {"user_id": user_id},
+            {
+                "$set": {
+                    "video_tool_selected": None,
+                    "merge_type": None,
+                    "encoding_settings": None,
+                    "trim_settings": None,
+                    "temp_files": [],
+                    "last_used": datetime.utcnow()
+                }
+            }
         )
 
     async def add_task(self, user_id: int, task_type: str, status: str = "processing"):
@@ -193,4 +270,3 @@ class Database:
         """Check if user is banned"""
         user = await self.get_user(user_id)
         return user.get("is_banned", False) if user else False
-        

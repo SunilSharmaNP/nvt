@@ -1,7 +1,7 @@
 from pyrogram import Client, filters
 from pyrogram.types import Message
 from bot.database import db
-from bot.helpers.buttons import main_menu_buttons
+from bot.helpers.buttons import main_menu_buttons, user_settings_buttons, video_tools_buttons
 from bot.utils.helpers import is_admin, is_authorized_group
 from config import Config
 
@@ -14,20 +14,22 @@ WELCOME_TEXT = """
 • Video Encoding (Multiple Quality Presets)
 • Video Merging (Video+Video, Video+Audio, Video+Subs)
 • Format Conversion (Document↔Video)
-• Watermarking
+• Text/Image Watermarking
 • Video Trimming
 • Sample Generation
-• MediaInfo Extraction
+• Professional MediaInfo
 
 ⚙️ **शुरू करने के लिए:**
-1. पहले **User Settings** configure करें
-2. **Video Tools** menu से tool चुनें
+1. **User Settings** (/us) से preferences configure करें
+2. **Video Tools** (/vt) menu से tool enable करें  
 3. अपनी video file भेजें
 
-📋 **जरूरी नोट:**
-• एक समय में एक task
-• Authorized groups में ही काम करता है
-• Task शुरू करने से पहले settings set करें
+📋 **Commands:**
+• /start - Welcome menu
+• /us - User Settings
+• /vt - Video Tools
+• /hold - Hold mode (stop processing)
+• /help - Complete guide
 
 नीचे से option चुनें:
 """
@@ -44,6 +46,9 @@ async def start_private(client: Client, message: Message):
         await message.reply_text("❌ आप इस bot को उपयोग करने से banned हैं।")
         return
 
+    # Activate user in private mode
+    await db.set_user_active(user_id, True)
+    
     await message.reply_text(
         WELCOME_TEXT,
         reply_markup=main_menu_buttons()
@@ -51,7 +56,7 @@ async def start_private(client: Client, message: Message):
 
 @Client.on_message(filters.command("start") & filters.group)
 async def start_group(client: Client, message: Message):
-    """Handle /start command in group"""
+    """Handle /start command in group - only activates, doesn't toggle"""
     user_id = message.from_user.id
     username = message.from_user.username
     chat_id = message.chat.id
@@ -71,49 +76,112 @@ async def start_group(client: Client, message: Message):
         )
         return
 
-    is_active = await db.is_user_active(user_id, chat_id)
-    await db.set_user_active(user_id, chat_id, not is_active)
+    # Always activate (don't toggle)
+    await db.set_user_active(user_id, True, chat_id)
+    
+    await message.reply_text(
+        f"✅ **Bot Activated for {message.from_user.mention}**\n\n"
+        "🎬 अब आप सभी video tools का उपयोग कर सकते हैं!\n\n"
+        "⚙️ **Quick Setup:**\n"
+        "1. /us से User Settings configure करें\n"
+        "2. /vt से Video Tools menu खोलें\n"
+        "3. Tool enable करके files भेजें\n\n"
+        "💡 Hold mode के लिए /hold command use करें।",
+        reply_markup=main_menu_buttons()
+    )
 
-    if not is_active:
-        await message.reply_text(
-            f"✅ **Bot Activated for {message.from_user.mention}**\n\n"
-            "🎬 अब आप सभी video tools का उपयोग कर सकते हैं!\n\n"
-            "⚙️ **Quick Setup:**\n"
-            "1. पहले User Settings configure करें\n"
-            "2. Video Tools menu से tool चुनें\n"
-            "3. अपनी files भेजें\n\n"
-            "नीचे के buttons से शुरू करें:",
-            reply_markup=main_menu_buttons()
-        )
-    else:
-        await message.reply_text(
-            f"⏸ **Bot Deactivated for {message.from_user.mention}**\n\n"
-            "Bot अब hold mode में है।\n"
-            "दोबारा activate करने के लिए /start उपयोग करें।"
-        )
-
-@Client.on_message(filters.command("stop"))
-async def stop_command(client: Client, message: Message):
-    """Handle /stop command"""
+@Client.on_message(filters.command("hold"))
+async def hold_command(client: Client, message: Message):
+    """Handle /hold command - put bot in hold mode"""
     user_id = message.from_user.id
-
+    
     await db.cancel_task(user_id)
     await db.clear_temp_files(user_id)
-
+    
     if message.chat.type != "private":
-        await db.set_user_active(user_id, message.chat.id, False)
+        chat_id = message.chat.id
+        await db.set_user_active(user_id, False, chat_id)
         await message.reply_text(
-            "🛑 **Bot Stopped**\n\n"
-            "• Active tasks cancelled\n"
-            "• Temporary files cleared\n"
-            "• Bot set to hold mode\n\n"
+            f"⏸ **Hold Mode Activated for {message.from_user.mention}**\n\n"
+            "• All tasks cancelled\n"
+            "• Temp files cleared\n"
+            "• Bot won't process your files\n\n"
             "Use /start to activate again."
         )
     else:
+        await db.set_user_active(user_id, False)
         await message.reply_text(
-            "🛑 **Tasks Cancelled**\n\n"
-            "सभी active tasks cancel कर दिए गए हैं।"
+            "⏸ **Hold Mode Activated**\n\n"
+            "Bot won't process your files.\n"
+            "Use /start to activate again."
         )
+
+@Client.on_message(filters.command("us"))
+async def user_settings_command(client: Client, message: Message):
+    """Direct shortcut to User Settings menu"""
+    user_id = message.from_user.id
+    await db.add_user(user_id, message.from_user.username)
+    
+    if await db.is_user_banned(user_id):
+        await message.reply_text("❌ You are banned.")
+        return
+    
+    user = await db.get_user(user_id)
+    settings = user.get("settings", Config.DEFAULT_SETTINGS) if user else Config.DEFAULT_SETTINGS
+    
+    settings_text = f"""
+⚙️ **Your Current Settings**
+
+📄 **Send as:** {settings.get('send_as', 'document').title()}
+🖼️ **Thumbnail:** {'Set' if user.get('thumbnail_file_id') else 'Not Set'}
+📝 **Filename:** {user.get('custom_filename') or 'Default'}
+📋 **Metadata:** {'Enabled' if settings.get('metadata') else 'Disabled'}
+⬇️ **Download Mode:** {settings.get('download_mode', 'telegram').upper()}
+⬆️ **Upload Mode:** {settings.get('upload_mode', 'telegram').title()}
+
+नीचे से setting बदलें:
+"""
+    
+    await message.reply_text(settings_text, reply_markup=user_settings_buttons())
+
+@Client.on_message(filters.command("vt"))
+async def video_tools_command(client: Client, message: Message):
+    """Direct shortcut to Video Tools menu"""
+    user_id = message.from_user.id
+    await db.add_user(user_id, message.from_user.username)
+    
+    if await db.is_user_banned(user_id):
+        await message.reply_text("❌ You are banned.")
+        return
+    
+    user = await db.get_user(user_id)
+    active_tool = user.get("video_tool_selected") if user else None
+    
+    vt_text = "🎬 **Video Tools Menu**\n\n"
+    if active_tool:
+        vt_text += f"✅ **Active Tool:** {active_tool.replace('_', ' ').title()}\n\n"
+    else:
+        vt_text += "⚠️ **No tool selected**\nपहले एक tool enable करें!\n\n"
+    
+    vt_text += "Tool select करें (tick mark वाला active है):"
+    
+    await message.reply_text(vt_text, reply_markup=video_tools_buttons(active_tool))
+
+@Client.on_message(filters.command("stop"))
+async def stop_command(client: Client, message: Message):
+    """Handle /stop command - clears tasks and data"""
+    user_id = message.from_user.id
+
+    await db.cancel_task(user_id)
+    await db.clear_all_user_data(user_id)
+
+    await message.reply_text(
+        "🛑 **All Data Cleared**\n\n"
+        "• Active tasks cancelled\n"
+        "• Tool selections cleared\n"
+        "• Temporary files removed\n\n"
+        "Bot is still active. Use /hold to deactivate."
+    )
 
 @Client.on_message(filters.command("s") & filters.group)
 async def show_tasks(client: Client, message: Message):
@@ -148,60 +216,57 @@ async def show_tasks(client: Client, message: Message):
 async def help_command(client: Client, message: Message):
     """Handle /help command"""
     help_text = """
-📚 **Video Tools Bot - Help Guide**
+📚 **Video Tools Bot - Complete Guide**
 
-**Available Commands:**
-• `/start` - Bot activate/deactivate करें
-• `/stop` - Bot stop करें और tasks cancel करें
-• `/s` - सभी running tasks देखें (groups only)
+**🎯 Commands:**
+• `/start` - Bot activate करें
+• `/hold` - Hold mode (processing band करें)
+• `/us` - User Settings
+• `/vt` - Video Tools menu
+• `/stop` - सभी data clear करें
+• `/s` - Active tasks देखें (groups)
 • `/help` - यह help message
 
-**कैसे उपयोग करें:**
+**1️⃣ User Settings (/us)**
+अपनी preferences configure करें:
+• **Send as**: Document/Video format
+• **Thumbnail**: Custom thumbnail image
+• **Filename**: Custom output filename
+• **Metadata**: Video metadata on/off
+• **Download Mode**: Telegram/URL downloads
+• **Upload Mode**: Telegram/GoFile uploads
 
-**1️⃣ User Settings**
-Processing से पहले अपनी preferences configure करें:
-• **Send as**: Document या Video
-• **Thumbnail**: Custom thumbnail set करें
-• **Filename**: Output filename customize करें
-• **Metadata**: Enable/Disable करें
-• **Download Mode**: Telegram या Direct URL
-• **Upload Mode**: Telegram या GoFile server
-
-**2️⃣ Video Tools**
-7 शक्तिशाली tools में से चुनें:
+**2️⃣ Video Tools (/vt)**
+Tool enable करें, फिर file भेजें:
 
 🔗 **Video Merge**
-   • Video + Video: Multiple videos merge करें
-   • Video + Audio: Audio track replace/add करें
-   • Video + Subtitles: Subtitle file add करें
-
-🎞️ **Video Encoding**
-   • Multiple quality presets (1080p, 720p, 480p, 360p)
-   • HEVC encoding for smaller files
-   • Custom encoding settings
-
+   • Video+Video, Video+Audio, Video+Subs
+   • Dual audio support
+   
+🎞️ **Encoding**
+   • 1080p, 720p, 480p, 360p
+   • HEVC (smaller files)
+   
 🔄 **Convert**
-   • Document to Video
-   • Video to Document
-
+   • Document ↔ Video
+   
 ©️ **Watermark**
-   • Videos पर image watermark add करें
-
-✂️ **Trim Video**
-   • Video से specific portions cut करें
-
-🎬 **Sample Video**
-   • Sample clips generate करें
-
+   • Text या PNG image
+   
+✂️ **Trim**
+   • Specific portions cut करें
+   
+🎬 **Sample**
+   • 30/60/120/300 second samples
+   
 📊 **MediaInfo**
-   • Detailed video information पाएं
+   • Professional file analysis
 
-**Important Notes:**
-• एक समय में एक task per user
-• Authorized groups में ही काम करता है
-• Tasks शुरू करने से पहले User Settings set करें
+**📋 Important:**
+• Settings database में save होती हैं
+• एक बार tool enable करें, फिर files भेजें
+• Download/Upload mode validate होता है
 
-और मदद चाहिए? Owner से संपर्क करें: {Config.OWNER_ID}
+Owner: {Config.OWNER_ID}
 """
     await message.reply_text(help_text)
-    
