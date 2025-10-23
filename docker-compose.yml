@@ -1,0 +1,59 @@
+version: '3.8'
+
+services:
+  mongodb:
+    image: mongo:7.0
+    container_name: video_bot_mongodb
+    restart: unless-stopped
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_ROOT_USER}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_ROOT_PASSWORD}
+    volumes:
+      - mongodb_data:/data/db
+    ports:
+      - "27017:27017"
+    networks:
+      - bot_network
+    healthcheck:
+      test: echo 'db.runCommand("ping").ok' | mongosh localhost:27017/test --quiet
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  bot:
+    build: .
+    container_name: video_tools_bot
+    restart: unless-stopped
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    environment:
+      # Telegram Bot Configuration
+      BOT_TOKEN: ${BOT_TOKEN}
+      API_ID: ${API_ID}
+      API_HASH: ${API_HASH}
+      
+      # Bot Owner/Admin
+      OWNER_ID: ${OWNER_ID}
+      SUDO_USERS: ${SUDO_USERS:-}
+      AUTHORIZED_GROUPS: ${AUTHORIZED_GROUPS}
+      
+      # MongoDB Configuration (using environment variables)
+      MONGO_URI: ${MONGO_URI}
+      DATABASE_NAME: ${DATABASE_NAME:-video_tools_bot}
+      
+      # Optional
+      GOFILE_API_KEY: ${GOFILE_API_KEY:-}
+      LOG_CHANNEL: ${LOG_CHANNEL:-}
+      
+    volumes:
+      - ./downloads:/app/downloads
+    networks:
+      - bot_network
+
+volumes:
+  mongodb_data:
+
+networks:
+  bot_network:
+    driver: bridge
