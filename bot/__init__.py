@@ -10,12 +10,13 @@ class Bot(Client):
             bot_token=Config.BOT_TOKEN,
             plugins=dict(root="bot/plugins")
         )
-    
+
     async def start(self):
         await super().start()
         me = await self.get_me()
         print(f"✅ Bot Started as @{me.username}")
-    
+
     async def stop(self):
         await super().stop()
         print("🛑 Bot Stopped")
+        
