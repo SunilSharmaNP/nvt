@@ -6,21 +6,21 @@ load_dotenv()
 class Config:
     # Telegram Bot Configuration
     BOT_TOKEN = os.environ.get("BOT_TOKEN", "")
-    
+
     # Safe int conversion with default
     try:
         API_ID = int(os.environ.get("API_ID", "0"))
     except ValueError:
         API_ID = 0
-    
+
     API_HASH = os.environ.get("API_HASH", "")
-    
+
     # Bot Owner/Admin Configuration
     try:
         OWNER_ID = int(os.environ.get("OWNER_ID", "0"))
     except ValueError:
         OWNER_ID = 0
-    
+
     # Parse sudo users safely
     SUDO_USERS = []
     sudo_users_str = os.environ.get("SUDO_USERS", "")
@@ -31,7 +31,7 @@ class Config:
                     SUDO_USERS.append(int(x.strip()))
             except ValueError:
                 pass
-    
+
     # Parse authorized groups safely
     AUTHORIZED_GROUPS = []
     auth_groups_str = os.environ.get("AUTHORIZED_GROUPS", "")
@@ -42,25 +42,25 @@ class Config:
                     AUTHORIZED_GROUPS.append(int(x.strip()))
             except ValueError:
                 pass
-    
+
     # MongoDB Configuration
     MONGO_URI = os.environ.get("MONGO_URI", "mongodb://localhost:27017")
     DATABASE_NAME = os.environ.get("DATABASE_NAME", "video_tools_bot")
-    
+
     # Download/Upload Configuration
     DOWNLOAD_DIR = os.environ.get("DOWNLOAD_DIR", "downloads")
     MAX_FILE_SIZE = int(os.environ.get("MAX_FILE_SIZE", "2147483648"))
-    
+
     # GoFile Configuration
     GOFILE_API_KEY = os.environ.get("GOFILE_API_KEY", "")
-    
+
     # FFmpeg Configuration
     FFMPEG_THREADS = int(os.environ.get("FFMPEG_THREADS", "2"))
-    
+
     # Bot Settings
     SESSION_NAME = os.environ.get("SESSION_NAME", "video_tools_bot")
     LOG_CHANNEL = os.environ.get("LOG_CHANNEL", "")
-    
+
     # Default User Settings
     DEFAULT_SETTINGS = {
         "send_as": "document",
@@ -70,7 +70,7 @@ class Config:
         "download_mode": "telegram",
         "upload_mode": "telegram"
     }
-    
+
     # Video Quality Presets
     VIDEO_PRESETS = {
         "1080p": {
@@ -130,3 +130,4 @@ class Config:
             "codec": "libx264"
         }
     }
+    
