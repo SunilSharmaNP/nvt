@@ -1,0 +1,54 @@
+# Git files
+.git
+.gitignore
+
+# Python cache
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.so
+*.egg
+*.egg-info
+dist
+build
+.cache
+.pythonlibs
+
+# Virtual environments
+venv/
+env/
+ENV/
+
+# IDE files
+.vscode
+.idea
+*.swp
+*.swo
+*~
+
+# Temporary files
+downloads/*
+!downloads/.gitkeep
+*.tmp
+*.log
+
+# Documentation (comment out if you want to include them)
+*.md
+!README.md
+
+# Environment files (will be provided at runtime)
+.env
+
+# Replit specific
+.replit
+replit.nix
+.upm
+.breakpoints
+
+# Other
+attached_assets/
+test_setup.py
+setup.py
+start_message.py
